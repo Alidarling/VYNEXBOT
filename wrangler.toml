@@ -1,0 +1,10 @@
+name = "vynex-referral-bot"
+main = "worker.js"
+compatibility_date = "2026-07-08"
+
+# After creating your D1 database in Cloudflare Dashboard,
+# either bind it from Dashboard as DB, or replace database_id below.
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "vynex-referral-bot-db"
+# database_id = "PUT_YOUR_D1_DATABASE_ID_HERE"
