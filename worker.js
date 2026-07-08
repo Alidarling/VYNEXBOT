@@ -1,7 +1,7 @@
 // Vynex Referral Bot v1.1 - Cloudflare Workers + D1
 // Features: referral tracking, forced channel join, manual purchase orders, admin approval, rewards, broadcast, support/tutorial.
 
-const VERSION = 'VYNEX_REFERRAL_BOT_V1_1_FORCE_JOIN_OK';
+const VERSION = 'VYNEX_REFERRAL_BOT_V1_2_D1_SAFE_OK';
 
 const DEFAULT_PLANS = [
   { id: 'eco50', title: '50GB | 30 روز', price: '100,000 تومان' },
@@ -124,62 +124,68 @@ function planKeyboard() {
 }
 
 async function initDb(env) {
-  await env.DB.exec(`
-CREATE TABLE IF NOT EXISTS users (
-  tg_id TEXT PRIMARY KEY,
-  username TEXT,
-  first_name TEXT,
-  last_name TEXT,
-  ref_by TEXT,
-  pending_ref TEXT DEFAULT '',
-  state TEXT DEFAULT '',
-  state_data TEXT DEFAULT '',
-  is_blocked INTEGER DEFAULT 0,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS referrals (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  inviter_id TEXT NOT NULL,
-  referred_id TEXT NOT NULL UNIQUE,
-  created_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS orders (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  tg_id TEXT NOT NULL,
-  plan_id TEXT NOT NULL,
-  plan_title TEXT NOT NULL,
-  price TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'awaiting_receipt',
-  receipt_file_id TEXT,
-  receipt_type TEXT,
-  receipt_text TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS reward_requests (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  tg_id TEXT NOT NULL,
-  level INTEGER NOT NULL,
-  reward_title TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending',
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS claimed_rewards (
-  tg_id TEXT NOT NULL,
-  level INTEGER NOT NULL,
-  created_at TEXT NOT NULL,
-  PRIMARY KEY (tg_id, level)
-);
-CREATE TABLE IF NOT EXISTS admin_logs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  admin_id TEXT,
-  action TEXT NOT NULL,
-  target TEXT,
-  created_at TEXT NOT NULL
-);
-  `);
+  // V1.2: D1-safe initialization. Run each CREATE separately to avoid D1 exec parser issues.
+  const statements = [
+    `CREATE TABLE IF NOT EXISTS users (
+      tg_id TEXT PRIMARY KEY,
+      username TEXT,
+      first_name TEXT,
+      last_name TEXT,
+      ref_by TEXT,
+      pending_ref TEXT DEFAULT '',
+      state TEXT DEFAULT '',
+      state_data TEXT DEFAULT '',
+      is_blocked INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS referrals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      inviter_id TEXT NOT NULL,
+      referred_id TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tg_id TEXT NOT NULL,
+      plan_id TEXT NOT NULL,
+      plan_title TEXT NOT NULL,
+      price TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'awaiting_receipt',
+      receipt_file_id TEXT,
+      receipt_type TEXT,
+      receipt_text TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS reward_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tg_id TEXT NOT NULL,
+      level INTEGER NOT NULL,
+      reward_title TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS claimed_rewards (
+      tg_id TEXT NOT NULL,
+      level INTEGER NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (tg_id, level)
+    )`,
+    `CREATE TABLE IF NOT EXISTS admin_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_id TEXT,
+      action TEXT NOT NULL,
+      target TEXT,
+      created_at TEXT NOT NULL
+    )`,
+  ];
+
+  for (const sql of statements) {
+    await env.DB.prepare(sql).run();
+  }
+
   await env.DB.prepare("ALTER TABLE users ADD COLUMN pending_ref TEXT DEFAULT ''").run().catch(() => {});
 }
 
